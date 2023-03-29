@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'lil-gui'
+import testVertexShader from './shaders/test/vertex.glsl'
+import testFragmentShader from './shaders/test/fragment.glsl'
 
 /**
  * Base
@@ -18,18 +20,41 @@ const scene = new THREE.Scene()
  * Textures
  */
 const textureLoader = new THREE.TextureLoader()
+const flagTexture = textureLoader.load('/textures/flag-french.jpg')
 
 /**
  * Test mesh
  */
 // Geometry
 const geometry = new THREE.PlaneGeometry(1, 1, 32, 32)
+const count = geometry.attributes.position.count
+const randoms = new Float32Array(count)
+randoms.forEach((el, i) => {
+    randoms[i] = Math.random()
+})
+geometry.setAttribute('aRandom', new THREE.BufferAttribute(randoms, 1))
 
 // Material
-const material = new THREE.MeshBasicMaterial()
+const material = new THREE.ShaderMaterial({
+    vertexShader: testVertexShader,
+    fragmentShader: testFragmentShader,
+    uniforms: {
+        uFrequency: { value: new THREE.Vector2(10, 5) },
+        uTime: { value: 0 },
+        uColor: { value: new THREE.Color('orange') },
+        uTexture: { value: flagTexture }
+    }
+})
+
+gui.add(material.uniforms.uFrequency.value, 'x')
+    .min(0).max(20).step(0.01).name('Frequency X');
+
+gui.add(material.uniforms.uFrequency.value, 'y')
+    .min(0).max(20).step(0.01).name('Frequency Y')
 
 // Mesh
 const mesh = new THREE.Mesh(geometry, material)
+mesh.scale.y = 2 / 3
 scene.add(mesh)
 
 /**
@@ -40,8 +65,7 @@ const sizes = {
     height: window.innerHeight
 }
 
-window.addEventListener('resize', () =>
-{
+window.addEventListener('resize', () => {
     // Update sizes
     sizes.width = window.innerWidth
     sizes.height = window.innerHeight
@@ -81,9 +105,11 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
  */
 const clock = new THREE.Clock()
 
-const tick = () =>
-{
+const tick = () => {
     const elapsedTime = clock.getElapsedTime()
+
+    // Update material
+    material.uniforms.uTime.value = elapsedTime
 
     // Update controls
     controls.update()
